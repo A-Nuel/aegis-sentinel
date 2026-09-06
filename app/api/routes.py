@@ -3,6 +3,7 @@ from pydantic import BaseModel
 
 from app.core.rpc import rpc
 from app.engine.credits import credit_loop
+from app.engine.explain import public_feed
 from app.engine.sentinel import sentinel
 
 router = APIRouter(prefix="/api")
@@ -24,6 +25,22 @@ def alerts(limit: int = 50):
     return sentinel.recent_alerts(limit)
 
 
+@router.get("/findings")
+def findings(limit: int = 50):
+    """Public-friendly feed: meaning + general defensive guidance."""
+    return public_feed(sentinel.recent_alerts(limit), limit=limit)
+
+
+@router.get("/findings/{alert_id}")
+def finding_detail(alert_id: str):
+    for a in sentinel.recent_alerts(200):
+        if a.get("id") == alert_id:
+            from app.engine.explain import explain_alert
+
+            return explain_alert(a)
+    return {"error": "not found"}
+
+
 @router.get("/watched")
 def watched():
     return sentinel.watched
@@ -41,7 +58,8 @@ def unwatch(req: UnwatchRequest):
 
 
 @router.post("/scan")
-def scan(chain: str = "ethereum", enrich: bool = True):
+def scan(chain: str = "ethereum", enrich: bool = False):
+    # enrich=False by default so local builds work before Orbio credits
     return sentinel.scan_latest_block(chain, enrich=enrich)
 
 
