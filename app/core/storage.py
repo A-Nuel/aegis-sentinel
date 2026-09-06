@@ -1,4 +1,4 @@
-"""Lightweight SQLite for watched targets + alerts (not the private audit DB)."""
+"""Lightweight SQLite for watched targets + alerts."""
 
 from __future__ import annotations
 
@@ -48,10 +48,23 @@ class Store:
             )
         return {"address": address, "chain": chain, "label": label}
 
+    def remove_watch(self, address: str, chain: str) -> bool:
+        with self._conn() as c:
+            cur = c.execute(
+                "DELETE FROM watched WHERE address = ? AND chain = ?",
+                (address, chain),
+            )
+            return cur.rowcount > 0
+
     def list_watched(self) -> list[dict[str, str]]:
         with self._conn() as c:
             rows = c.execute("SELECT address, chain, label FROM watched").fetchall()
         return [dict(r) for r in rows]
+
+    def alert_exists(self, alert_id: str) -> bool:
+        with self._conn() as c:
+            row = c.execute("SELECT 1 FROM alerts WHERE id = ?", (alert_id,)).fetchone()
+        return row is not None
 
     def save_alert(self, alert: dict[str, Any]) -> None:
         with self._conn() as c:

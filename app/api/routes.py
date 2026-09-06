@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from app.core.rpc import rpc
 from app.engine.credits import credit_loop
@@ -12,6 +12,11 @@ class WatchRequest(BaseModel):
     address: str
     chain: str = "ethereum"
     label: str = ""
+
+
+class UnwatchRequest(BaseModel):
+    address: str
+    chain: str = "ethereum"
 
 
 @router.get("/alerts")
@@ -27,6 +32,12 @@ def watched():
 @router.post("/watch")
 def watch(req: WatchRequest):
     return sentinel.watch(req.address, req.chain, req.label)
+
+
+@router.post("/unwatch")
+def unwatch(req: UnwatchRequest):
+    ok = sentinel.unwatch(req.address, req.chain)
+    return {"removed": ok}
 
 
 @router.post("/scan")
@@ -47,3 +58,8 @@ def credits():
 @router.post("/credits/ensure")
 def credits_ensure():
     return credit_loop.ensure_funded()
+
+
+@router.get("/credits/key")
+def credits_key():
+    return credit_loop.openrouter_key_info()

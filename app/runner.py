@@ -1,4 +1,4 @@
-"""Continuous multi-chain scan loop."""
+"""Continuous multi-chain agent loop: credits → scan → log."""
 
 from __future__ import annotations
 
@@ -10,19 +10,31 @@ from app.engine.sentinel import sentinel
 
 
 def main() -> None:
-    print("Aegis Sentinel runner started")
+    print("=== Aegis Sentinel agent loop ===")
     print(f"Chains: {settings.chains_list}")
     print(f"Interval: {settings.scan_interval_seconds}s")
+    print(f"Credit threshold: ${settings.credit_low_threshold_usd}")
+    print(f"OpenRouter key set: {bool(settings.openrouter_api_key)}")
+    cycle = 0
     while True:
-        credit_loop.ensure_funded()
+        cycle += 1
+        print(f"\n--- cycle {cycle} ---")
+        funded = credit_loop.ensure_funded()
+        print(f"credits: action={funded.get('action')} remaining={funded.get('remaining_usd')}")
+
+        enrich = bool(settings.openrouter_api_key)
         for chain in settings.chains_list:
             try:
-                result = sentinel.scan_latest_block(chain, enrich=bool(settings.openrouter_api_key))
+                result = sentinel.scan_latest_block(chain, enrich=enrich)
                 print(f"[{chain}] new_alerts={result['new_alerts']}")
                 for a in result.get("alerts") or []:
-                    print(f"  - {a.get('severity')} {a.get('type')}: {a.get('details')}")
+                    print(
+                        f"  - {a.get('severity')} {a.get('type')}: "
+                        f"{a.get('llm_summary') or a.get('details')}"
+                    )
             except Exception as exc:
                 print(f"[{chain}] error: {exc}")
+
         time.sleep(settings.scan_interval_seconds)
 
 
