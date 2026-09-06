@@ -9,16 +9,58 @@ GUIDANCE: dict[str, dict[str, str]] = {
         "title": "Flash-loan style activity",
         "means": (
             "A transaction looks like it borrows a large amount for one block, "
-            "does work, then repays. Common in complex DeFi and in many historical exploits."
+            "does work, then repays. Common in complex DeFi and in many historical incidents."
         ),
         "watch_for": (
-            "Same-tx interaction with a protocol you care about, pool imbalance, "
+            "Same-tx interaction with a lending market you care about, pool imbalance, "
             "or oracle reads right after a huge borrow."
         ),
         "harden": (
             "Resistant oracles, reentrancy guards, access control, caps/pauses. "
             "Do not trust spot prices that can move inside one transaction."
         ),
+    },
+    "LENDING_ORACLE_RISK": {
+        "title": "Lending + oracle / pricing stress pattern",
+        "means": (
+            "Calldata combines flash-loan and/or oracle-style calls with borrow, "
+            "liquidate, or pool-skew (swap + remove liquidity) selectors in one transaction. "
+            "Historically this shape appears when attackers try to move a price a lending "
+            "market relies on, then borrow or liquidate against the distorted value. "
+            "This alert is a heuristic — not proof of an exploit."
+        ),
+        "watch_for": (
+            "Watched lending pools, collateral factors, oracle admin events, and "
+            "abnormal utilization in the same block."
+        ),
+        "harden": (
+            "TWAP or multi-source oracles, borrow caps, pause guardians, "
+            "and deviation circuit breakers. Never price borrows off a single spot pool."
+        ),
+    },
+    "LENDING_LIQUIDATION": {
+        "title": "Lending liquidation activity",
+        "means": "A liquidation-style call on a money market was detected.",
+        "watch_for": "Cascades if oracle or collateral volatility is elevated.",
+        "harden": "Sensible close factors, oracle resilience, and monitoring on large positions.",
+    },
+    "LENDING_BORROW": {
+        "title": "Lending borrow",
+        "means": "A borrow-style call against a lending protocol pattern was seen.",
+        "watch_for": "Borrows right after large swaps or oracle updates on the same collateral.",
+        "harden": "Caps, collateral quality lists, and oracle delay/TWAP.",
+    },
+    "LENDING_SUPPLY": {
+        "title": "Lending supply / mint",
+        "means": "Supply or cToken-mint style activity.",
+        "watch_for": "Unusual supply of illiquid collateral before borrowing.",
+        "harden": "Collateral onboarding reviews and supply caps.",
+    },
+    "LENDING_WITHDRAW": {
+        "title": "Lending withdraw / redeem",
+        "means": "Withdraw or redeem-style activity on a lending market.",
+        "watch_for": "Sudden exits from a pool you depend on for liquidity.",
+        "harden": "Withdrawal queues and utilization alerts.",
     },
     "WHALE_TRANSFER": {
         "title": "Large native transfer",
@@ -29,7 +71,7 @@ GUIDANCE: dict[str, dict[str, str]] = {
     "LARGE_SWAP": {
         "title": "Large router swap",
         "means": "A DEX router swap with a sizable native value attached.",
-        "watch_for": "Price impact on thin pairs tied to a protocol you watch.",
+        "watch_for": "Price impact on thin pairs used as lending oracles or collateral paths.",
         "harden": "TWAP/resistant pricing and circuit breakers on abnormal volume.",
     },
     "ADMIN_STATE_CHANGE": {

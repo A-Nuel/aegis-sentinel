@@ -12,7 +12,12 @@ from app.core.rpc import rpc
 from app.core.storage import store
 from app.engine.detectors import classify_calldata
 
-HIGH_TYPES = {"FLASH_LOAN", "ADMIN_STATE_CHANGE"}
+HIGH_TYPES = {
+    "FLASH_LOAN",
+    "ADMIN_STATE_CHANGE",
+    "LENDING_ORACLE_RISK",
+    "LENDING_LIQUIDATION",
+}
 
 
 class Sentinel:
@@ -40,7 +45,6 @@ class Sentinel:
             txs = list(block.get("transactions") or [])
             watched = self._watched_set(chain)
 
-            # Prefer watched-target txs, then sample the rest of the block
             prioritized: list[Any] = []
             rest: list[Any] = []
             for tx in txs:
@@ -101,9 +105,12 @@ class Sentinel:
         if not hit:
             return None
 
-        # Network-wide: keep high-signal + whales.
-        # Watched addresses: keep all detector hits (including medium/low).
-        if watched and not on_watch and hit["type"] not in HIGH_TYPES and hit["type"] != "WHALE_TRANSFER":
+        if (
+            watched
+            and not on_watch
+            and hit["type"] not in HIGH_TYPES
+            and hit["type"] != "WHALE_TRANSFER"
+        ):
             return None
 
         return {

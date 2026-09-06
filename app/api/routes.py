@@ -7,6 +7,7 @@ from app.engine.credits import credit_loop
 from app.engine.explain import public_feed
 from app.engine.mcp_agent import self_funding_status
 from app.engine.sentinel import sentinel
+from app.engine.tx_explain import explain_tx
 
 router = APIRouter(prefix="/api")
 
@@ -19,6 +20,11 @@ class WatchRequest(BaseModel):
 
 class UnwatchRequest(BaseModel):
     address: str
+    chain: str = "ethereum"
+
+
+class ExplainTxRequest(BaseModel):
+    tx_hash: str
     chain: str = "ethereum"
 
 
@@ -40,6 +46,15 @@ def finding_detail(alert_id: str):
 
             return explain_alert(a)
     return {"error": "not found"}
+
+
+@router.post("/explain-tx")
+def explain_transaction(req: ExplainTxRequest):
+    """Sibling: paste a tx hash → detector + Orbio-backed brief."""
+    try:
+        return explain_tx(req.tx_hash, req.chain)
+    except Exception as exc:
+        return {"error": str(exc)}
 
 
 @router.get("/watched")
@@ -99,5 +114,4 @@ def credits_key():
 
 @router.get("/agent/self-funding")
 def agent_self_funding():
-    """Full self-funding playbook for demos / judges."""
     return self_funding_status()
