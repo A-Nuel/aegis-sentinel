@@ -3,68 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aegis Sentinel — Public Findings</title>
+  <title>Aegis Sentinel</title>
   <style>
     :root {
-      --bg: #0b0f14;
-      --panel: #121821;
-      --border: #1e2a38;
-      --text: #e8eef5;
-      --muted: #8b9bb0;
-      --accent: #3dd6c6;
-      --high: #ff6b6b;
-      --med: #ffc857;
-      --low: #6bcb77;
+      --bg: #0b0f14; --panel: #121821; --border: #1e2a38;
+      --text: #e8eef5; --muted: #8b9bb0; --accent: #3dd6c6;
+      --high: #ff6b6b; --med: #ffc857; --low: #6bcb77;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
+      background: var(--bg); color: var(--text); line-height: 1.5;
     }
     header {
-      padding: 1.25rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      align-items: center;
-      justify-content: space-between;
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;
     }
-    h1 { margin: 0; font-size: 1.15rem; letter-spacing: 0.02em; }
+    h1 { margin: 0; font-size: 1.15rem; }
     h1 span { color: var(--accent); }
     .meta { color: var(--muted); font-size: 0.85rem; }
-    main { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
-    .toolbar {
-      display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem;
+    main { max-width: 980px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    .grid { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
+    @media (min-width: 800px) { .grid.two { grid-template-columns: 1fr 1fr; } }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 1rem; }
+    button, select, input {
+      background: var(--panel); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 0.45rem 0.75rem; font-size: 0.9rem;
     }
-    button, select {
-      background: var(--panel);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.45rem 0.75rem;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
+    button { cursor: pointer; }
     button:hover { border-color: var(--accent); }
+    input { min-width: 12rem; flex: 1; }
     .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1rem 1.1rem;
-      margin-bottom: 0.75rem;
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1rem 1.1rem; margin-bottom: 0.75rem;
     }
     .row { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; }
     .badge {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      padding: 0.2rem 0.45rem;
-      border-radius: 999px;
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.04em; padding: 0.2rem 0.45rem; border-radius: 999px;
       border: 1px solid var(--border);
     }
     .Critical, .High { color: var(--high); border-color: #5a2a2a; }
@@ -76,30 +53,57 @@
     a:hover { text-decoration: underline; }
     details { margin-top: 0.5rem; }
     summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
-    .empty { color: var(--muted); padding: 2rem 0; text-align: center; }
+    .empty { color: var(--muted); padding: 1.5rem 0; text-align: center; }
+    h2 { font-size: 0.95rem; margin: 0 0 0.5rem; color: var(--muted); font-weight: 600; }
   </style>
 </head>
 <body>
   <header>
     <div>
       <h1>Aegis <span>Sentinel</span></h1>
-      <div class="meta">Public findings · continuous DeFi risk monitor</div>
+      <div class="meta">Continuous DeFi monitor · Orbio-ready</div>
     </div>
     <div class="meta" id="status">Loading…</div>
   </header>
   <main>
+    <div class="grid two">
+      <section class="card" id="credits-card">
+        <h2>Credits / self-funding</h2>
+        <div class="muted" id="credits">Loading…</div>
+        <div class="toolbar">
+          <button type="button" id="ensure">Ensure funded</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Watchlist</h2>
+        <div class="toolbar">
+          <input id="watch-addr" placeholder="0x…" />
+          <select id="watch-chain">
+            <option>ethereum</option><option>arbitrum</option><option>base</option>
+            <option>optimism</option><option>polygon</option>
+          </select>
+          <button type="button" id="add-watch">Add</button>
+        </div>
+        <div id="watched" class="muted">None</div>
+      </section>
+    </div>
+
     <div class="toolbar">
       <button type="button" id="refresh">Refresh</button>
-      <button type="button" id="scan">Scan ethereum now</button>
+      <select id="scan-chain">
+        <option>ethereum</option><option>arbitrum</option><option>base</option>
+        <option>optimism</option><option>polygon</option>
+      </select>
+      <button type="button" id="scan">Scan chain</button>
+      <button type="button" id="scan-all">Scan all</button>
       <select id="severity">
         <option value="">All severities</option>
-        <option>Critical</option>
-        <option>High</option>
-        <option>Medium</option>
-        <option>Low</option>
+        <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
       </select>
     </div>
-    <div id="list" class="empty">No findings yet. Run a scan or start the agent runner.</div>
+
+    <h2>Public findings</h2>
+    <div id="list" class="empty">No findings yet.</div>
   </main>
   <script>
     const explorers = {
@@ -115,10 +119,47 @@
         const r = await fetch('/health');
         const j = await r.json();
         document.getElementById('status').textContent =
-          `${j.status} · watched ${j.watched} · recent sample ${j.alerts}`;
+          `${j.status} · v${j.version} · watched ${j.watched}`;
       } catch {
         document.getElementById('status').textContent = 'API offline';
       }
+    }
+
+    async function loadCredits() {
+      try {
+        const r = await fetch('/api/credits');
+        const j = await r.json();
+        const last = j.last_status || {};
+        document.getElementById('credits').innerHTML =
+          `Key: <strong>${j.key_configured ? 'yes' : 'no'}</strong><br/>` +
+          `Base: ${j.base_url || '—'}<br/>` +
+          `Action: ${last.action || '—'} · remaining: ${last.remaining_usd ?? 'unknown'}<br/>` +
+          `<span class="muted">MCP: ${j.mcp_endpoint}</span>`;
+      } catch {
+        document.getElementById('credits').textContent = 'Credits unavailable';
+      }
+    }
+
+    async function loadWatched() {
+      const r = await fetch('/api/watched');
+      const items = await r.json();
+      const el = document.getElementById('watched');
+      if (!items.length) { el.textContent = 'None'; return; }
+      el.innerHTML = items.map((w) =>
+        `<div class="row" style="margin:0.25rem 0">` +
+        `<code>${w.address}</code> <span class="badge">${w.chain}</span>` +
+        `<button data-a="${w.address}" data-c="${w.chain}" class="rm">Remove</button></div>`
+      ).join('');
+      el.querySelectorAll('.rm').forEach((btn) => {
+        btn.onclick = async () => {
+          await fetch('/api/unwatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: btn.dataset.a, chain: btn.dataset.c }),
+          });
+          loadWatched();
+        };
+      });
     }
 
     function render(items) {
@@ -133,49 +174,59 @@
       el.className = '';
       el.innerHTML = filtered.map((f) => {
         const link = f.tx_hash && explorers[f.chain]
-          ? `<a href="${explorers[f.chain](f.tx_hash)}" target="_blank" rel="noopener">View tx</a>`
-          : '';
-        return `
-          <article class="card">
-            <div class="row">
-              <span class="badge ${f.severity || ''}">${f.severity || '?'}</span>
-              <span class="badge">${f.chain || ''}</span>
-              <span class="muted">${f.type || ''}</span>
-              ${link}
-            </div>
-            <div class="title">${f.title || f.type || 'Finding'}</div>
-            <div class="muted">${f.means || f.raw_details || ''}</div>
-            <details>
-              <summary>Watch for &amp; harden</summary>
-              <p><strong>Watch for:</strong> ${f.watch_for || '—'}</p>
-              <p><strong>Harden:</strong> ${f.harden || '—'}</p>
-            </details>
-          </article>`;
+          ? `<a href="${explorers[f.chain](f.tx_hash)}" target="_blank" rel="noopener">View tx</a>` : '';
+        return `<article class="card">
+          <div class="row">
+            <span class="badge ${f.severity || ''}">${f.severity || '?'}</span>
+            <span class="badge">${f.chain || ''}</span>
+            <span class="muted">${f.type || ''}</span>${link}
+          </div>
+          <div class="title">${f.title || f.type || 'Finding'}</div>
+          <div class="muted">${f.means || f.raw_details || ''}</div>
+          <details><summary>Watch for &amp; harden</summary>
+            <p><strong>Watch for:</strong> ${f.watch_for || '—'}</p>
+            <p><strong>Harden:</strong> ${f.harden || '—'}</p>
+          </details></article>`;
       }).join('');
     }
 
     async function loadFindings() {
       const r = await fetch('/api/findings?limit=50');
-      const items = await r.json();
-      render(Array.isArray(items) ? items : []);
+      render(await r.json());
     }
 
-    document.getElementById('refresh').onclick = () => { loadStatus(); loadFindings(); };
-    document.getElementById('severity').onchange = () => loadFindings();
+    document.getElementById('refresh').onclick = () => {
+      loadStatus(); loadCredits(); loadWatched(); loadFindings();
+    };
+    document.getElementById('severity').onchange = loadFindings;
+    document.getElementById('ensure').onclick = async () => {
+      await fetch('/api/credits/ensure', { method: 'POST' });
+      loadCredits();
+    };
+    document.getElementById('add-watch').onclick = async () => {
+      const address = document.getElementById('watch-addr').value.trim();
+      if (!address) return;
+      const chain = document.getElementById('watch-chain').value;
+      await fetch('/api/watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, chain }),
+      });
+      document.getElementById('watch-addr').value = '';
+      loadWatched();
+    };
     document.getElementById('scan').onclick = async () => {
-      document.getElementById('scan').disabled = true;
-      try {
-        await fetch('/api/scan?chain=ethereum&enrich=false', { method: 'POST' });
-        await loadFindings();
-        await loadStatus();
-      } finally {
-        document.getElementById('scan').disabled = false;
-      }
+      const chain = document.getElementById('scan-chain').value;
+      await fetch(`/api/scan?chain=${chain}`, { method: 'POST' });
+      loadFindings(); loadStatus();
+    };
+    document.getElementById('scan-all').onclick = async () => {
+      await fetch('/api/scan/all', { method: 'POST' });
+      loadFindings(); loadStatus();
     };
 
-    loadStatus();
-    loadFindings();
-    setInterval(() => { loadStatus(); loadFindings(); }, 30000);
+    loadStatus(); loadCredits(); loadWatched(); loadFindings();
+    setInterval(() => { loadStatus(); loadCredits(); loadFindings(); }, 30000);
   </script>
 </body>
 </html>
