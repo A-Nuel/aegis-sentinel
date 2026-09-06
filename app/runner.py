@@ -13,8 +13,8 @@ def main() -> None:
     print("=== Aegis Sentinel agent loop ===")
     print(f"Chains: {settings.chains_list}")
     print(f"Interval: {settings.scan_interval_seconds}s")
-    print(f"Credit threshold: ${settings.credit_low_threshold_usd}")
-    print(f"OpenRouter key set: {bool(settings.openrouter_api_key)}")
+    print(f"LLM base: {settings.llm_base_url}")
+    print(f"Orbio key set: {bool(settings.llm_api_key)}")
     cycle = 0
     while True:
         cycle += 1
@@ -22,7 +22,7 @@ def main() -> None:
         funded = credit_loop.ensure_funded()
         print(f"credits: action={funded.get('action')} remaining={funded.get('remaining_usd')}")
 
-        enrich = bool(settings.openrouter_api_key)
+        enrich = bool(settings.llm_api_key)
         for chain in settings.chains_list:
             try:
                 result = sentinel.scan_latest_block(chain, enrich=enrich)

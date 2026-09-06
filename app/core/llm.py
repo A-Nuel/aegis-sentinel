@@ -1,4 +1,4 @@
-"""LLM via OpenRouter — use the key claimed from Orbio."""
+"""LLM via Orbio OpenAI-compatible gateway (or OpenRouter-compatible fallback)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from app.config import settings
 
 class LLM:
     def score_alert(self, alert: dict[str, Any]) -> dict[str, Any]:
-        if not settings.openrouter_api_key:
+        if not settings.llm_api_key:
             return {
                 "severity": alert.get("severity", "Medium"),
                 "summary": alert.get("details", ""),
@@ -28,10 +28,12 @@ class LLM:
         try:
             with httpx.Client(timeout=45) as client:
                 r = client.post(
-                    f"{settings.openrouter_base_url}/chat/completions",
+                    f"{settings.llm_base_url}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {settings.openrouter_api_key}",
+                        "Authorization": f"Bearer {settings.llm_api_key}",
                         "Content-Type": "application/json",
+                        "HTTP-Referer": "https://github.com/A-Nuel/aegis-sentinel",
+                        "X-Title": "Aegis Sentinel",
                     },
                     json={
                         "model": settings.orbio_model,
@@ -44,7 +46,7 @@ class LLM:
                 match = re.search(r"\{[\s\S]*\}", text)
                 if match:
                     data = json.loads(match.group(0))
-                    data["source"] = "openrouter"
+                    data["source"] = "orbio"
                     return data
         except Exception as exc:
             return {
