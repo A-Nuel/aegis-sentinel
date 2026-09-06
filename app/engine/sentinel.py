@@ -10,24 +10,9 @@ from web3 import Web3
 from app.core.llm import llm
 from app.core.rpc import rpc
 from app.core.storage import store
+from app.engine.detectors import classify_calldata
 
-# Function selectors / markers commonly seen in risky flows
-FLASH_SIGS = (
-    "ab963c34",  # flashLoan
-    "5cffe9de",  # flashLoanSimple-ish patterns
-    "flashloan",
-    "a0712d68",
-)
-ADMIN_HINTS = (
-    "845dd321",  # pause variants appear as text too
-    "f2fde38b",  # transferOwnership
-    "pause(",
-    "unpause(",
-    "transferownership",
-    "renounceownership",
-    "updateowner",
-)
-ORACLE_HINTS = ("setprice", "updateprice", "latestanswer", "submitvalue")
+HIGH_TYPES = {"FLASH_LOAN", "ADMIN_STATE_CHANGE"}
 
 
 class Sentinel:
@@ -42,6 +27,9 @@ class Sentinel:
     def watched(self) -> list[dict[str, str]]:
         return store.list_watched()
 
+    def _watched_set(self, chain: str) -> set[str]:
+        return {w["address"].lower() for w in store.list_watched() if w["chain"] == chain}
+
     def scan_latest_block(self, chain: str = "ethereum", enrich: bool = True) -> dict[str, Any]:
         chain = chain.lower()
         new_alerts: list[dict[str, Any]] = []
@@ -49,8 +37,23 @@ class Sentinel:
             w3 = rpc.get_web3(chain)
             block = w3.eth.get_block("latest", full_transactions=True)
             block_num = int(block["number"])
-            for tx in list(block.get("transactions") or [])[:40]:
-                alert = self._inspect_tx(w3, chain, block_num, tx)
+            txs = list(block.get("transactions") or [])
+            watched = self._watched_set(chain)
+
+            # Prefer watched-target txs, then sample the rest of the block
+            prioritized: list[Any] = []
+            rest: list[Any] = []
+            for tx in txs:
+                to_addr = str(tx.get("to") or "").lower()
+                frm = str(tx.get("from") or "").lower()
+                if watched and (to_addr in watched or frm in watched):
+                    prioritized.append(tx)
+                else:
+                    rest.append(tx)
+            ordered = prioritized + rest[:80]
+
+            for tx in ordered:
+                alert = self._inspect_tx(w3, chain, block_num, tx, watched)
                 if not alert:
                     continue
                 if store.alert_exists(alert["id"]):
@@ -76,55 +79,45 @@ class Sentinel:
                 new_alerts.append(err)
         return {"chain": chain, "new_alerts": len(new_alerts), "alerts": new_alerts}
 
-    def _inspect_tx(self, w3: Web3, chain: str, block_num: int, tx: Any) -> dict[str, Any] | None:
-        raw_input = str(tx.get("input") or "").lower()
+    def _inspect_tx(
+        self,
+        w3: Web3,
+        chain: str,
+        block_num: int,
+        tx: Any,
+        watched: set[str],
+    ) -> dict[str, Any] | None:
+        raw_input = str(tx.get("input") or "")
         tx_hash = tx.get("hash")
         tx_hash_hex = tx_hash.hex() if hasattr(tx_hash, "hex") else str(tx_hash)
         value_eth = float(w3.from_wei(tx.get("value") or 0, "ether"))
+        to_addr = tx.get("to")
+        from_addr = tx.get("from")
+        to_l = str(to_addr or "").lower()
+        from_l = str(from_addr or "").lower()
+        on_watch = bool(watched) and (to_l in watched or from_l in watched)
 
-        kind = severity = details = None
-        if any(sig in raw_input for sig in FLASH_SIGS):
-            kind, severity, details = "FLASH_LOAN", "High", "Flash-loan related calldata detected"
-        elif value_eth >= 500:
-            kind, severity, details = (
-                "WHALE_TRANSFER",
-                "Medium",
-                f"{value_eth:,.2f} native units transferred",
-            )
-        elif any(h in raw_input for h in ADMIN_HINTS):
-            kind, severity, details = (
-                "ADMIN_STATE_CHANGE",
-                "High",
-                "pause / ownership / admin-style call pattern",
-            )
-        elif any(h in raw_input for h in ORACLE_HINTS) and len(raw_input) > 10:
-            kind, severity, details = (
-                "ORACLE_TOUCH",
-                "Medium",
-                "Possible oracle price update path in calldata",
-            )
-
-        if not kind:
+        hit = classify_calldata(raw_input, value_eth)
+        if not hit:
             return None
 
-        to_addr = tx.get("to")
-        watched = store.list_watched()
-        watched_on_chain = {w["address"].lower() for w in watched if w["chain"] == chain}
-        # With watches on this chain: only emit if target matches; else network-wide sample
-        if watched_on_chain and to_addr and str(to_addr).lower() not in watched_on_chain:
+        # Network-wide: keep high-signal + whales.
+        # Watched addresses: keep all detector hits (including medium/low).
+        if watched and not on_watch and hit["type"] not in HIGH_TYPES and hit["type"] != "WHALE_TRANSFER":
             return None
 
         return {
-            "id": f"{kind}-{tx_hash_hex[:14]}",
+            "id": f"{hit['type']}-{tx_hash_hex[:14]}",
             "timestamp": time.time(),
             "chain": chain,
             "block": block_num,
-            "type": kind,
-            "severity": severity,
+            "type": hit["type"],
+            "severity": hit["severity"],
             "tx_hash": tx_hash_hex,
-            "from_address": tx.get("from"),
+            "from_address": from_addr,
             "to_address": to_addr,
-            "details": details,
+            "watched_hit": on_watch,
+            "details": hit["details"] + (" · watched target" if on_watch else ""),
         }
 
     def recent_alerts(self, limit: int = 50) -> list[dict[str, Any]]:
