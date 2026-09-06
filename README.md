@@ -1,39 +1,70 @@
 # Aegis Sentinel
 
-Self-sustaining DeFi security agent for **Orbio Build Week**.
+**Self-sustaining DeFi security agent for Orbio Build Week**
 
-Continuous on-chain monitoring, Telegram + web alerts, and an Orbio MCP loop so the agent can claim, watch, and top up its own inference credits.
+Continuous on-chain monitoring · Telegram + API alerts · Orbio MCP credit loop
 
-This is a **new repo**. It does not modify `aegisweb3-protosec`. Patterns are adapted from that project's Threat Sentinel (live block scan, flash-loan / whale / admin detectors) and rebuilt as a public agent.
+This repo is **new and public**. It does **not** modify `aegisweb3-protosec`.
 
-## What it does
+### What was ported vs left out
 
-- Watch contract addresses on Ethereum / Arbitrum / Base
-- Detect flash-loan signatures, large transfers, pause / ownership changes
-- Ask an LLM (via Orbio / OpenRouter key) to score severity
-- Alert on Telegram and show a live web dashboard
-- Self-manage Orbio credits (balance → claim key → spend → top up / rotate)
+**Included (needed to run):**
+- Live block threat scanning (flash-loan sigs, whale transfers, admin/pause calls)
+- Multi-chain RPC with public failover (no private keys baked in)
+- LLM severity scoring via OpenRouter (Orbio-claimed key)
+- Continuous scan loop
+- Telegram bot commands + alerts
+- FastAPI dashboard API
+- Local SQLite for watched contracts + alerts
+- Credit-loop stub for Orbio MCP
 
-## Stack
+**Left out (confidential / not needed for this challenge):**
+- Master password, JWT secrets, IP allowlists
+- Full multi-pass audit / HITL / forge verification stack
+- Existing SQLite audit DBs and fork caches
+- Internal enterprise report / mitigation pipeline
 
-- Python 3.11+ / FastAPI / web3.py
-- Telegram bot
-- Next.js dashboard (coming next)
-- Orbio MCP + OpenRouter key
+---
 
 ## Quick start
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+git clone https://github.com/A-Nuel/aegis-sentinel.git
+cd aegis-sentinel
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# fill RPC, TELEGRAM_BOT_TOKEN, OPENROUTER_API_KEY (claimed from Orbio)
+# edit .env — at least one RPC; optional TELEGRAM_* and OPENROUTER_API_KEY
+
+# API
 uvicorn app.main:app --reload --port 8000
+
+# Continuous monitor (separate terminal)
+python -m app.runner
+
+# Telegram bot (optional)
+python -m app.bot.telegram
 ```
 
-Dashboard API: http://127.0.0.1:8000/docs
+API docs: http://127.0.0.1:8000/docs
 
-## Status
+---
 
-Day 0 scaffold. Next: wire live RPC scan loop + Telegram + MCP credit manager.
+## Orbio Build Week angle
+
+1. Hold 1,000+ $ORBIO · apply at orbio.so/build
+2. Claim $100 credits · put key in `OPENROUTER_API_KEY`
+3. Wire Orbio MCP so the agent tops itself up
+4. Keep project public by day 7
+
+## Roadmap (7 days)
+
+| Day | Focus |
+|-----|--------|
+| 0–1 | Apply, claim credits, run this base |
+| 2 | Harden detectors + continuous loop |
+| 3 | Telegram commands polish |
+| 4 | Orbio MCP self-funding loop |
+| 5 | Next.js dashboard |
+| 6 | Demo video + README polish |
+| 7 | Public final + submit |

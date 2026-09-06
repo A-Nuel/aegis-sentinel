@@ -6,7 +6,7 @@ from app.engine.sentinel import sentinel
 
 app = FastAPI(
     title="Aegis Sentinel",
-    version="0.1.0",
+    version="0.2.0",
     description="Self-sustaining DeFi security agent for Orbio Build Week",
 )
 
@@ -26,6 +26,7 @@ def health():
     return {
         "status": "ONLINE",
         "service": "Aegis Sentinel",
+        "version": "0.2.0",
         "watched": len(sentinel.watched),
-        "alerts": len(sentinel.alerts),
+        "alerts": len(sentinel.recent_alerts(5)),
     }

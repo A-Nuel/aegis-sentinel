@@ -7,6 +7,11 @@ class Settings(BaseSettings):
     eth_rpc_url: str = "https://eth.llamarpc.com"
     arb_rpc_url: str = "https://arb1.arbitrum.io/rpc"
     base_rpc_url: str = "https://mainnet.base.org"
+    opt_rpc_url: str = "https://mainnet.optimism.io"
+    polygon_rpc_url: str = "https://polygon-rpc.com"
+
+    alchemy_api_key: str = ""
+    infura_api_key: str = ""
 
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
@@ -17,6 +22,11 @@ class Settings(BaseSettings):
 
     credit_low_threshold_usd: float = 5.0
     scan_interval_seconds: int = 30
+    default_chains: str = "ethereum,arbitrum,base"
+
+    @property
+    def chains_list(self) -> list[str]:
+        return [c.strip() for c in self.default_chains.split(",") if c.strip()]
 
 
 settings = Settings()
